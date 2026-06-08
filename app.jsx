@@ -367,8 +367,9 @@ function totalWorkMinutesFor(node) {
 function DesktopSubtaskPanel({
   title, items, activeId, selectedIds, allSelected, selectedCount,
   onToggleSelected, onSelectAll, onClearSelected, onPrintSelected,
-  onOpen, onOpenActions, onComplete,
+  onOpen, onOpenActions, onComplete, onAddSubtask,
 }) {
+  const showBulkActions = items.length > 0;
   return (
     <div className="desktop-subtask-panel">
       <div className="section">
@@ -376,8 +377,10 @@ function DesktopSubtaskPanel({
           <div className="section-title">
             {title} {items.length > 0 && `· ${items.length}`}
           </div>
-          {items.length > 0 && (
+          {(showBulkActions || onAddSubtask) && (
             <div className="desktop-subtask-panel-actions">
+              {showBulkActions && (
+                <>
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -393,6 +396,17 @@ function DesktopSubtaskPanel({
               >
                 In ({selectedCount})
               </button>
+                </>
+              )}
+              {onAddSubtask && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={onAddSubtask}
+                >
+                  <Icon.plus/> Thêm sub-task
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -2426,7 +2440,7 @@ function DesktopProductsSplit({
             </div>
             {showAsideAdd && onAddChild && (
               <div className="desktop-split-aside-foot desktop-split-aside-foot--stack">
-                <button type="button" className="btn btn-primary btn-block" onClick={onAddChild}>
+                <button type="button" className="btn btn-primary btn-block" onClick={() => onAddChild(listParent)}>
                   <Icon.plus/> Thêm {asideAddLabel}
                 </button>
               </div>
@@ -2467,6 +2481,11 @@ function DesktopProductsSplit({
                 onOpen={openChild}
                 onOpenActions={openNodeActions}
                 onComplete={onCompleteNode}
+                onAddSubtask={
+                  currentNode?._source?.table === 'tasks' && !currentNode?._source?.parentTaskId
+                    ? () => onAddChild(currentNode)
+                    : undefined
+                }
               />
             ) : null}
             {...detailProps}
@@ -3821,9 +3840,10 @@ function App({ t }) {
     setSheet({ type: 'actions', nodeId: node.id });
   }, []);
 
-  const openAddChild = useCallback(() => {
-    if (!addChildParentNode?.id) return;
-    setSheet({ type: 'addChild', parentId: addChildParentNode.id });
+  const openAddChild = useCallback((parentOverride) => {
+    const targetParent = parentOverride?.id ? parentOverride : addChildParentNode;
+    if (!targetParent?.id) return;
+    setSheet({ type: 'addChild', parentId: targetParent.id });
   }, [addChildParentNode]);
 
   const openAddFeature = useCallback(() => {
