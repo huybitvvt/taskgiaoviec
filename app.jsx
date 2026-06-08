@@ -461,7 +461,7 @@ function collectPhotosFromTree(node) {
 function NodeDetail({
   node, depth, parent, t = {}, onOpenChild, onBack, onOpenPhoto, onViewPhoto, onEditNote, onEditDeadline,
   onOpenAssignees, onCycleStatus, onAddChild, onAddFeature, onOpenActions, onChildActions,
-  onPastePhotos, onOpenWorkAction, onCompleteWorkAction, onDeletePhoto, onOpenDocLink, onCompleteNode,
+  onPastePhotos, onOpenWorkAction, onCompleteWorkAction, onDeletePhoto, onOpenDocLink, onDeleteDocLink, onCompleteNode,
   onEditStartedAt,
   embedded = false, showBack = true, hideChildrenList = false,
   projectNode = null, subtaskSupported = true, docLinksSupported = true, projectDocLinksSupported = true,
@@ -768,6 +768,15 @@ function NodeDetail({
                       >
                         Sửa
                       </button>
+                      {typeof onDeleteDocLink === 'function' && (
+                        <button
+                          type="button"
+                          className="doc-link-btn doc-link-btn--danger"
+                          onClick={() => onDeleteDocLink(d)}
+                        >
+                          Xoá
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1757,6 +1766,9 @@ function BottomNav({ tab, onChange, alertCount }) {
     ) },
     { id: 'schedule', label: 'Lịch', icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+    ) },
+    { id: 'attendance', label: 'Chấm công', icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="3.5" width="16" height="17" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 2.5v4M16 2.5v4M4 8.5h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M8 13l2.3 2.3L16 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
     ) },
     { id: 'people', label: 'Nhân sự', icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.8"/><circle cx="17" cy="9.5" r="2.5" stroke="currentColor" strokeWidth="1.8"/><path d="M3 19a6 6 0 0112 0M14 18a5 5 0 017 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
@@ -4091,6 +4103,18 @@ function App({ t }) {
       ? (doc) => {
           const targetId = doc?.sourceNodeId || currentId;
           setSheet({ type: 'docLink', doc: doc || null, nodeId: targetId });
+        }
+      : undefined,
+    onDeleteDocLink: docLinksSupported
+      ? async (doc) => {
+          if (!doc) return;
+          const ok = window.confirm('Xoá link tài liệu này?');
+          if (!ok) return;
+          const targetId = doc.sourceNodeId || currentId;
+          const targetNode = findNode(targetId);
+          if (!targetNode) return;
+          const next = (targetNode.docLinks || []).filter((d) => d.id !== doc.id);
+          await persistDocLinksForNode(targetNode, next);
         }
       : undefined,
     docLinksSupported,

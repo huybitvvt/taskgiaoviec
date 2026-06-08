@@ -733,6 +733,9 @@ body, html {
 .doc-link-btn--view {
   color: var(--accent);
 }
+.doc-link-btn--danger {
+  color: var(--bad);
+}
 .doc-link-btn:active {
   opacity: 0.85;
 }
@@ -1218,7 +1221,7 @@ textarea:focus, input:focus { border-color: var(--accent); }
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   border-top: 1px solid var(--line);
-  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px;
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px;
 }
 .bottom-nav button {
   background: none; border: 0; padding: 4px 2px;
@@ -3565,7 +3568,7 @@ html.layout-desktop .gantt-kpi-grid { padding: 0 24px 32px; }
 html.layout-desktop .gantt-toolbar { padding: 0 24px 16px; }
 
 .attendance-embed-screen {
-  padding: 16px 20px 24px;
+  padding: 16px 20px 86px;
   display: flex;
   flex-direction: column;
   min-height: 100%;
@@ -3614,6 +3617,7 @@ html.layout-desktop .gantt-toolbar { padding: 0 24px 16px; }
 
 html.layout-desktop .attendance-embed-screen {
   height: calc(100vh - 32px);
+  padding-bottom: 24px;
 }
 html.layout-desktop .attendance-embed-frame-wrap,
 html.layout-desktop .attendance-embed-frame {
