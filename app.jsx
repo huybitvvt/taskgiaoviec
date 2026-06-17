@@ -613,6 +613,7 @@ function NodeDetail({
   onPastePhotos, onOpenWorkAction, onCompleteWorkAction, onSendDiscussion, onDeletePhoto, onOpenDocLink, onDeleteDocLink, onCompleteNode,
   onEditStartedAt, onEditGoodsPercent,
   embedded = false, showBack = true, hideChildrenList = false,
+  showHome = false, onHome = null,
   projectNode = null, subtaskSupported = true, docLinksSupported = true, projectDocLinksSupported = true,
   subtaskPanel = null,
   currentUserId = null, accessRole = 'worker', people = [],
@@ -854,13 +855,20 @@ function NodeDetail({
     <div className={`screen screen--detail ${embedded ? 'screen--embedded' : ''}`}>
       {/* TopBar */}
       <div className={`topbar topbar--detail ${scrolled ? 'scrolled' : ''} ${embedded ? 'topbar--embedded' : ''}`}>
-        {showBack ? (
-          <button className="icon-btn" onClick={onBack} aria-label={translate('back')}>
-            <Icon.back/>
-          </button>
-        ) : (
-          <div className="icon-btn icon-btn--spacer" aria-hidden/>
-        )}
+          {showBack ? (
+            <button className="icon-btn" onClick={onBack} aria-label={translate('back')}>
+              <Icon.back/>
+            </button>
+          ) : (
+            <div className="icon-btn icon-btn--spacer" aria-hidden/>
+          )}
+          {showHome ? (
+            <button className="icon-btn" onClick={onHome} aria-label={translate('home')}>
+              <Icon.home/>
+            </button>
+          ) : (
+            null
+          )}
         <div className="title-wrap title-wrap--detail-inline">
           <div className="detail-inline-title">
             <span className="detail-inline-crumb">{detailTopLabel}</span>
@@ -5287,6 +5295,8 @@ function App({ t: tweakSettings }) {
           t={tweakSettings}
           onOpenChild={openChild}
           onBack={back}
+          showHome={stack && stack.length > 0}
+          onHome={() => navigate(pathForTab('products', effectiveLayout))}
           onOpenActions={openNodeActions}
           onChildActions={openNodeActions}
           {...detailHandlers}
@@ -5341,17 +5351,16 @@ function App({ t: tweakSettings }) {
     />;
   }
 
-  // Hide bottom nav while drilled into product detail tree
   const showBottomNav = !isDesktop && (
-    (tab === 'products' && stack.length === 0)
-    || (tab === 'subtasks')
-    || (tab === 'schedule' || tab === 'labor' || tab === 'attendance')
+    tab === 'products'
+    || tab === 'subtasks'
+    || tab === 'schedule' || tab === 'labor' || tab === 'attendance'
     || (tab === 'people' && !personId)
     || (tab === 'me')
   );
 
   const view = (
-    <div className={`app-viewport ${isDesktop ? 'app-viewport--desktop' : ''}`}>
+    <div className={`app-viewport ${isDesktop ? 'app-viewport--desktop' : ''} ${showBottomNav ? 'has-nav' : ''}`}>
       {screen}
       {showBottomNav && (
         <BottomNav

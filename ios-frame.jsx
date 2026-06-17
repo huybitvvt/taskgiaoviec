@@ -82,7 +82,7 @@ function IOSGlassPill({ children, dark = false, style = {} }) {
 // ─────────────────────────────────────────────────────────────
 // Navigation bar — glass pills + large title
 // ─────────────────────────────────────────────────────────────
-function IOSNavBar({ title = 'Title', dark = false, trailingIcon = true }) {
+function IOSNavBar({ title = 'Title', dark = false, trailingIcon = true, showHome = false, onHome = null }) {
   const muted = dark ? 'rgba(255,255,255,0.6)' : '#404040';
   const text = dark ? '#fff' : '#000';
   const pillIcon = (content) => (
@@ -106,6 +106,15 @@ function IOSNavBar({ title = 'Title', dark = false, trailingIcon = true }) {
           <svg width="12" height="20" viewBox="0 0 12 20" fill="none" style={{ marginLeft: -1 }}>
             <path d="M10 2L2 10l8 8" stroke={muted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
+        )}
+        {/* home button when requested */}
+        {showHome && pillIcon(
+          <button onClick={onHome} style={{ background: 'transparent', border: 'none', padding: 0, margin: 0, cursor: onHome ? 'pointer' : 'default' }} aria-label="Home">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M3 10.5L12 3l9 7.5" stroke={muted} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5 21V11h14v10" stroke={muted} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         )}
         {/* trailing ellipsis */}
         {trailingIcon && pillIcon(
@@ -190,7 +199,7 @@ function IOSList({ header, children, dark = false }) {
 // ─────────────────────────────────────────────────────────────
 function IOSDevice({
   children, width = 402, height = 874, dark = false,
-  title, keyboard = false,
+  title, keyboard = false, showHome = false, onHome = null,
 }) {
   return (
     <div style={{
@@ -211,7 +220,7 @@ function IOSDevice({
       </div>
       {/* nav + content */}
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {title !== undefined && <IOSNavBar title={title} dark={dark} />}
+        {title !== undefined && <IOSNavBar title={title} dark={dark} showHome={showHome} onHome={onHome} />}
         <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
         {keyboard && <IOSKeyboard dark={dark} />}
       </div>

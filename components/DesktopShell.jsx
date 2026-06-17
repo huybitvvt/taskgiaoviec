@@ -55,7 +55,7 @@ const NAV_ICONS = {
 export function DesktopShell({ children, alertCount = 0, onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { tab } = parseAppPath(location.pathname);
+  const { tab, stack = [] } = parseAppPath(location.pathname);
   const mobileHref = swapLayoutPath(location.pathname, 'mobile');
   const { t } = useI18n();
 
@@ -103,6 +103,19 @@ export function DesktopShell({ children, alertCount = 0, onLogout }) {
         </nav>
 
         <div className="desktop-sidebar-foot">
+          {tab === 'products' && stack && stack.length > 0 && (
+            <button
+              type="button"
+              className="desktop-layout-switch desktop-home-btn"
+              onClick={() => navigate(pathForTab('products', 'desktop'))}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ marginRight: 8 }}>
+                <path d="M3 10.5L12 3l9 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M5 21V11h14v10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {t('goHome') || 'Home'}
+            </button>
+          )}
           <Link to={mobileHref} className="desktop-layout-switch">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <rect x="7" y="2.5" width="10" height="19" rx="2.5" stroke="currentColor" strokeWidth="1.8"/>
