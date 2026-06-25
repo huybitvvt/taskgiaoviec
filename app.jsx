@@ -627,6 +627,8 @@ function NodeDetail({
   const listParent = resolveListParent(node, parent);
   const childNodes = listParent ? (listParent.children || []) : (node.children || []);
   const hasChildren = childNodes.length > 0;
+  const nodeHasChildren = (node.children || []).length > 0;
+  const canCycleStatus = !nodeHasChildren && typeof onCycleStatus === 'function';
   const { child: addChildLabel, section: childrenLabel } = addChildLabels(listParent || node);
   const myLabel = levelLabels[depth] || LEVEL_LABEL[depth] || 'Mục';
   const detailTopLabel = parent
@@ -887,7 +889,7 @@ function NodeDetail({
         <div className="hero hero--compact">
           <div className="hero-toolbar">
             <div className="meta-row">
-              <button type="button" className="meta-chip-btn" onClick={onCycleStatus}>
+              <button type="button" className="meta-chip-btn" onClick={canCycleStatus ? onCycleStatus : undefined} disabled={!canCycleStatus}>
                 <StatusChip status={node.status}/>
               </button>
               <DeadlineChip iso={node.deadline} status={node.status} onClick={onEditDeadline}/>
@@ -1175,7 +1177,7 @@ function NodeDetail({
               <div className="section-title">{translate('sectionDetails')}</div>
             </div>
             <div className="list">
-              <button onClick={onCycleStatus} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', background:'#fff', border:'1px solid var(--line)', borderRadius:14, cursor:'pointer', fontFamily:'var(--font-body)', fontSize:13, color:'var(--ink)', textAlign:'left' }}>
+              <button type="button" onClick={canCycleStatus ? onCycleStatus : undefined} disabled={!canCycleStatus} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', background:'#fff', border:'1px solid var(--line)', borderRadius:14, cursor: canCycleStatus ? 'pointer' : 'default', opacity: canCycleStatus ? 1 : 0.6, fontFamily:'var(--font-body)', fontSize:13, color:'var(--ink)', textAlign:'left' }}>
                 <Icon.check style={{ color:'var(--good)' }}/>
                 <span style={{flex:1}}>Đổi trạng thái</span>
                 <StatusChip status={node.status}/>
@@ -4414,8 +4416,10 @@ function ConfirmDeletePersonSheet({ person, onClose, onConfirm }) {
 
 function EditNodeSheet({ node, onClose, onSave }) {
   const label = nodeLevelLabel(node);
-  const showStatus = node?._source?.table === 'projects';
-  const showAssignee = node?._source?.table === 'tasks';
+  const nodeTable = node?._source?.table;
+  const isLeafNode = (node.children || []).length === 0;
+  const showStatus = isLeafNode && (nodeTable === 'projects' || nodeTable === 'features' || nodeTable === 'tasks');
+  const showAssignee = nodeTable === 'tasks';
   const [name, setName] = useState(node.name || '');
   const [status, setStatus] = useState(node.status || 'todo');
   const [deadlineDate, setDeadlineDate] = useState(() => splitDeadlineForInput(node.deadline).date);
@@ -4482,7 +4486,7 @@ function EditNodeSheet({ node, onClose, onSave }) {
         </div>
         {showStatus && (
           <div className="field">
-            <label className="field-label" htmlFor="edit-status">Tráº¡ng thÃ¡i</label>
+            <label className="field-label" htmlFor="edit-status">Trạng thái</label>
             <div className="status-choice-group" role="group" aria-label="Đổi trạng thái">
               {Object.entries(STATUS_META).map(([value, meta]) => (
                 <button
@@ -4507,7 +4511,7 @@ function EditNodeSheet({ node, onClose, onSave }) {
           onTimeChange={setDeadlineTime}
           currentIso={node.deadline}
         />
-        {showStatus && (
+        {nodeTable === 'projects' && (
           <div className="field">
             <span className="field-label">Vị trí công trình</span>
             <button
@@ -4820,6 +4824,7 @@ function App({ t: tweakSettings }) {
       if (target && patchForDb) {
         saveNodePatch(target, patchForDb, people).catch((err) => {
           console.error('[Supabase] Lưu thất bại:', err);
+          window.alert(err.message || 'Không lưu được thay đổi');
         });
       }
       setPathIndex(next);
@@ -5048,6 +5053,7 @@ function App({ t: tweakSettings }) {
     const nextStatus = cycle[currentNode?.status] || 'todo';
     updateNode(currentId, (n) => {
       n.status = nextStatus;
+      if (nextStatus !== 'done') n.completedAt = null;
     }, { status: nextStatus });
   };
 

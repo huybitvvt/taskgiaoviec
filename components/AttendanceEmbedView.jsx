@@ -24,18 +24,8 @@ export function AttendanceEmbedView({ person = null, currentUserId = null }) {
   return (
     <div className="screen has-nav attendance-embed-screen">
       <div className="attendance-embed-head">
-        <div>
-          <h1 className="screen-title">{t('attendanceTitle')}</h1>
-          <p className="screen-sub">{t('attendanceSub')}</p>
-        </div>
-        <a
-          className="attendance-embed-open"
-          href={attendanceUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {t('attendanceOpenNew')}
-        </a>
+        <h1 className="screen-title">{t('attendanceTitle')}</h1>
+        <p className="screen-sub">{t('attendanceSub')}</p>
       </div>
       <div className="attendance-embed-frame-wrap">
         <iframe
