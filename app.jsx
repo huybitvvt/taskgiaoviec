@@ -83,7 +83,6 @@ import { DEFAULT_RADIUS_M, newTeamScheduleId } from './lib/siteLocation.js';
 import { getCurrentPosition, formatCoords } from './lib/geolocation.js';
 import { teamsFromPeople } from './lib/teams.js';
 import { AttendancePanel } from './components/AttendancePanel.jsx';
-import { AssignedCheckInQueue } from './components/AssignedCheckInQueue.jsx';
 import { SiteLocationSheet, TeamScheduleSheet, ProjectStartedAtSheet } from './components/FieldOpsSheets.jsx';
 import { FieldOpsScreen } from './components/FieldOpsScreen.jsx';
 import { DateTimeFields } from './components/DateTimeFields.jsx';
@@ -2163,8 +2162,6 @@ function ProductsHome({
   products, onOpen, onOpenActions, onComplete, onAddProduct, onDeleteSelected,
   onCaptureLocation, locationSavingId = null,
   panel = false, currentUserId = null, canBulkDelete = false,
-  projectFieldSettingsSupported = true,
-  onAttendanceCheckIn, onAttendanceCheckOut,
 }) {
   const { t, locale } = useI18n();
   const [tab, setTab] = useState('active'); // active | done | all
@@ -2334,17 +2331,6 @@ function ProductsHome({
             </button>
           </div>
         </div>
-        )}
-
-        {!panel && projectFieldSettingsSupported && typeof onAttendanceCheckIn === 'function' && (
-          <AssignedCheckInQueue
-            products={products}
-            currentUserId={currentUserId}
-            people={PEOPLE}
-            onCheckIn={onAttendanceCheckIn}
-            onCheckOut={onAttendanceCheckOut}
-            onOpenProject={onOpen}
-          />
         )}
 
         <div className="home-search" style={{ marginTop: panel ? 8 : 6 }}>
@@ -4419,7 +4405,9 @@ function EditNodeSheet({ node, onClose, onSave }) {
   const label = nodeLevelLabel(node);
   const nodeTable = node?._source?.table;
   const isLeafNode = (node.children || []).length === 0;
-  const showStatus = isLeafNode && (nodeTable === 'projects' || nodeTable === 'features' || nodeTable === 'tasks');
+  const showStatus = nodeTable === 'projects'
+    || (isLeafNode && (nodeTable === 'features' || nodeTable === 'tasks'));
+  const statusLocked = nodeTable === 'projects' && !isLeafNode;
   const showAssignee = nodeTable === 'tasks';
   const [name, setName] = useState(node.name || '');
   const [status, setStatus] = useState(node.status || 'todo');
@@ -4458,10 +4446,10 @@ function EditNodeSheet({ node, onClose, onSave }) {
       const deadlineIso = deadlineDate ? combineDeadlineLocal(deadlineDate, deadlineTime) : null;
       await onSave({
         name,
-        ...(showStatus ? { status } : {}),
+        ...(showStatus && !statusLocked ? { status } : {}),
         deadline: deadlineIso,
         assignees: assigneeId ? [assigneeId] : [],
-        ...(showStatus && locationTouched ? { siteLocation } : {}),
+        ...(nodeTable === 'projects' && locationTouched ? { siteLocation } : {}),
       });
       onClose();
     } catch (e) {
@@ -4495,12 +4483,16 @@ function EditNodeSheet({ node, onClose, onSave }) {
                   type="button"
                   className={`status-choice-btn status-choice-btn--${value} ${status === value ? 'active' : ''}`}
                   onClick={() => setStatus(value)}
+                  disabled={statusLocked}
                 >
                   <span className="status-choice-dot" style={{ background: meta.dot }} />
                   {meta.label}
                 </button>
               ))}
             </div>
+            {statusLocked && (
+              <p className="field-note">Trạng thái được tính tự động từ hạng mục và công việc con.</p>
+            )}
           </div>
         )}
         <DeadlineDateTimeFields
@@ -5330,9 +5322,6 @@ function App({ t: tweakSettings }) {
           currentUserId={currentUserId}
           canBulkDelete={isAdmin(accessRole)}
           onDeleteSelected={handleDeleteProducts}
-          projectFieldSettingsSupported={projectFieldSettingsSupported}
-          onAttendanceCheckIn={attendanceCheckInForProject}
-          onAttendanceCheckOut={attendanceCheckOutForProject}
         />
       );
     } else if (!currentNode) {
