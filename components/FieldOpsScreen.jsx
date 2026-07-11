@@ -4,11 +4,23 @@ import { PersonalScheduleView } from './PersonalScheduleView.jsx';
 import { LaborReportView } from './LaborReportView.jsx';
 import { isAdmin } from '../lib/permissions.js';
 
+const LABELS = {
+  options: 'Schedule options',
+  hideOptions: 'Hide options',
+  team: 'Team schedule',
+  personal: 'Personal schedule',
+  labor: 'Labor report',
+};
+
 export function FieldOpsScreen({ products, people, accessRole, defaultTab = 'schedule', onOpenNode }) {
   const [tab, setTab] = useState(defaultTab);
   const [controlsOpen, setControlsOpen] = useState(false);
   const showLabor = isAdmin(accessRole);
-  const activeTabLabel = tab === 'schedule' ? 'Lịch đội' : tab === 'personal' ? 'Lịch cá nhân' : 'Báo cáo giờ';
+  const activeTabLabel = tab === 'schedule'
+    ? LABELS.team
+    : tab === 'personal'
+      ? LABELS.personal
+      : LABELS.labor;
 
   return (
     <div className="field-ops-screen">
@@ -19,7 +31,7 @@ export function FieldOpsScreen({ products, people, accessRole, defaultTab = 'sch
           aria-expanded={controlsOpen}
           onClick={() => setControlsOpen((open) => !open)}
         >
-          <span>{controlsOpen ? 'Ẩn tùy chọn' : 'Tùy chọn lịch'}</span>
+          <span>{controlsOpen ? LABELS.hideOptions : LABELS.options}</span>
           <strong>{activeTabLabel}</strong>
         </button>
       </div>
@@ -31,14 +43,14 @@ export function FieldOpsScreen({ products, people, accessRole, defaultTab = 'sch
             className={`filter-pill ${tab === 'schedule' ? 'active' : ''}`}
             onClick={() => setTab('schedule')}
           >
-            Lịch đội
+            {LABELS.team}
           </button>
           <button
             type="button"
             className={`filter-pill ${tab === 'personal' ? 'active' : ''}`}
             onClick={() => setTab('personal')}
           >
-            Lịch cá nhân
+            {LABELS.personal}
           </button>
           {showLabor && (
             <button
@@ -46,7 +58,7 @@ export function FieldOpsScreen({ products, people, accessRole, defaultTab = 'sch
               className={`filter-pill ${tab === 'labor' ? 'active' : ''}`}
               onClick={() => setTab('labor')}
             >
-              Báo cáo giờ
+              {LABELS.labor}
             </button>
           )}
         </div>

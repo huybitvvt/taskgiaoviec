@@ -12,7 +12,7 @@ import {
 import { currentLocalDateTimeForInput, formatScheduleRange } from '../lib/deadline.js';
 import { useI18n } from '../lib/i18n.jsx';
 
-const LABEL_W = 232;
+const LABEL_W = 120;
 const COL_W = 41;
 const HEADER_H = 60;
 const LANE_H = 46;
@@ -247,8 +247,10 @@ function ScheduleBoard({ days, todayDay, groups, selectedId, onSelect }) {
               y += group.height;
               return (
                 <div key={group.id} className="cs-group-label" style={{ top, height: group.height }}>
-                  <strong>{group.title}</strong>
-                  <span>{group.sub}</span>
+                  <div className="cs-group-label-inner">
+                    <strong>{group.title}</strong>
+                    <span>{group.sub}</span>
+                  </div>
                 </div>
               );
             })}

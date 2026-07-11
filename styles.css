@@ -5137,6 +5137,24 @@ button,
 .team-schedule-note { font-size: 12px; color: var(--muted); }
 .field-ops-controls-head {
   padding: 12px 20px 8px;
+  flex-shrink: 0;
+}
+.field-ops-screen {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+html.layout-native-mobile .app-viewport > .field-ops-screen {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
 }
 .field-ops-controls-toggle {
   width: 100%;
@@ -5737,7 +5755,7 @@ html.layout-desktop .gantt-toolbar { padding: 0 24px 16px; }
   z-index: 6;
   display: flex;
   align-items: center;
-  padding: 0 18px;
+  padding: 0 10px;
   background: #fafbfc;
   border-right: 1px solid #eef1f4;
   border-bottom: 1px solid #eef1f4;
@@ -5784,22 +5802,29 @@ html.layout-desktop .gantt-toolbar { padding: 0 24px 16px; }
 .cs-group-label {
   position: absolute;
   left: 0;
-  width: 232px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  padding: 0 18px;
+  width: 120px;
   border-bottom: 1px solid #eef1f4;
   background: #fff;
 }
+.cs-group-label-inner {
+  position: sticky;
+  top: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px;
+  min-width: 0;
+}
 .cs-group-label strong {
   color: #0d2238;
-  font-size: 15px;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cs-group-label span {
   color: #97a5b2;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 .cs-time {
@@ -6472,14 +6497,181 @@ html.layout-desktop .attendance-embed-frame {
 
 .standalone-schedule-view {
   width: 100%;
-  min-height: calc(100vh - 72px);
+  flex: 1 1 auto;
+  min-height: 0;
   background: #eef1ef;
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-date-filters {
+  flex-shrink: 0;
+  padding: 12px 16px 10px;
+  background: color-mix(in srgb, var(--bg-app) 88%, #fff);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schedule-date-filters-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schedule-date-filters-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.schedule-date-range-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.schedule-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.schedule-date-field > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.schedule-date-field .field-input {
+  min-height: 40px;
+}
+
+.schedule-quick-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.schedule-quick-card {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.schedule-quick-card:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.schedule-quick-card.active {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.schedule-quick-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.schedule-quick-card-head strong {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.schedule-quick-card-head span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.schedule-quick-card-range {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.schedule-quick-card-actions {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  gap: 6px;
+}
+
+.schedule-quick-card-actions .btn {
+  min-height: 36px;
+  padding: 0 8px;
+  width: 100%;
+}
+
+.schedule-date-filters-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .standalone-schedule-frame {
   display: block;
   width: 100%;
-  min-height: calc(100vh - 72px);
+  flex: 1 1 auto;
+  min-height: 70vh;
+  height: 70vh;
   border: 0;
   background: #eef1ef;
+}
+
+@media (max-width: 640px) {
+  .schedule-quick-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .schedule-date-filters {
+    padding: 10px 12px 8px;
+    gap: 8px;
+  }
+
+  .schedule-quick-card {
+    padding: 8px 10px;
+    gap: 4px;
+  }
+
+  .schedule-quick-card-actions .btn {
+    min-height: 32px;
+    font-size: 12px;
+  }
+
+  .standalone-schedule-frame {
+    min-height: 75vh;
+    height: 75vh;
+  }
+
+  html.layout-native-mobile .standalone-schedule-view {
+    min-height: auto;
+  }
+}
+
+html.layout-desktop .field-ops-screen {
+  overflow: hidden;
+  height: 100%;
+}
+
+html.layout-desktop .standalone-schedule-view {
+  min-height: 0;
+  height: 100%;
+}
+
+html.layout-desktop .standalone-schedule-frame {
+  min-height: 0;
+  height: auto;
 }
