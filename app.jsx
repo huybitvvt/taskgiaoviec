@@ -70,6 +70,7 @@ import { formatCompletedAt } from './lib/nodeCompletion.js';
 import {
   resolveAccessRole,
   isAdmin,
+  canOverrideNodeStatus,
   ACCESS_ROLE,
   canDeleteNode,
   canDeleteWorkAction,
@@ -77,6 +78,7 @@ import {
   filterProductsForUser,
   readStoredAccessRole,
   writeStoredAccessRole,
+  normalizeAccessRole,
 } from './lib/permissions.js';
 import { checkoutSession } from './lib/attendance.js';
 import { DEFAULT_RADIUS_M, newTeamScheduleId } from './lib/siteLocation.js';
@@ -628,7 +630,8 @@ function NodeDetail({
   const childNodes = listParent ? (listParent.children || []) : (node.children || []);
   const hasChildren = childNodes.length > 0;
   const nodeHasChildren = (node.children || []).length > 0;
-  const canCycleStatus = !nodeHasChildren && typeof onCycleStatus === 'function';
+  const canCycleStatus = (canOverrideNodeStatus(accessRole) || !nodeHasChildren)
+    && typeof onCycleStatus === 'function';
   const { child: addChildLabel, section: childrenLabel } = addChildLabels(listParent || node);
   const myLabel = levelLabels[depth] || LEVEL_LABEL[depth] || 'Mục';
   const detailTopLabel = parent
@@ -647,6 +650,7 @@ function NodeDetail({
   const canCompleteNode = typeof onCompleteNode === 'function';
   const showCompleteNodeBtn = canCompleteNode && !node.completedAt;
   const isNodeDone = node.status === 'done' || Boolean(node.completedAt);
+  const canReopenCompleted = canOverrideNodeStatus(accessRole) && Boolean(node.completedAt) && canCycleStatus;
   const isProject = nodeTable === 'projects';
   const isFeature = nodeTable === 'features';
   const showInlineProjectOps = false;
@@ -936,6 +940,15 @@ function NodeDetail({
                   <span className="node-completion-time">
                     Thời gian hoàn thành: {formatCompletedAt(node.completedAt)}
                   </span>
+                  {canReopenCompleted && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary node-completion-btn"
+                      onClick={onCycleStatus}
+                    >
+                      Đổi trạng thái
+                    </button>
+                  )}
                 </>
               ) : (
                 <>
@@ -1205,8 +1218,8 @@ function NodeDetail({
 }
 
 function personRoleKey(role = '') {
-  const raw = role.toLowerCase();
-  if (raw.includes('admin')) return 'admin';
+  const raw = String(role || '').toLowerCase().trim();
+  if (raw === 'ad' || raw.includes('admin')) return 'admin';
   if (raw.includes('trưởng') || raw.includes('leader')) return 'leader';
   return 'employee';
 }
@@ -3991,7 +4004,7 @@ function AddChildSheet({ parentNode, childLabel, onClose, onSave }) {
   );
 }
 
-function EditPersonSheet({ person, onClose, onSave }) {
+function EditPersonSheet({ person, onClose, onSave, showAccessRole = false }) {
   const { locale } = useI18n();
   const isNew = !person?.id;
   const roleOptions = [
@@ -4005,17 +4018,38 @@ function EditPersonSheet({ person, onClose, onSave }) {
   const [name, setName] = useState(person?.name || '');
   const [email, setEmail] = useState(person?.email || '');
   const [role, setRole] = useState(() => normalizeRoleOption(person?.role));
+  const [accessRole, setAccessRole] = useState(() => (
+    normalizeAccessRole(person?.accessRole)
+    || (normalizeRoleOption(person?.role) === 'admin' ? ACCESS_ROLE.ADMIN : ACCESS_ROLE.WORKER)
+  ));
   const [dept, setDept] = useState(person?.dept || '');
   const [phone, setPhone] = useState(person?.phone || '');
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
+  const handleRoleChange = (nextRole) => {
+    setRole(nextRole);
+    if (nextRole === 'admin') setAccessRole(ACCESS_ROLE.ADMIN);
+    else if (accessRole === ACCESS_ROLE.ADMIN && nextRole !== 'admin') {
+      setAccessRole(ACCESS_ROLE.WORKER);
+    }
+  };
+
   const handleSave = async () => {
     setErr('');
     setSaving(true);
     try {
-      await onSave({ name, email, role, dept, phone, password });
+      const nextAccessRole = role === 'admin' ? ACCESS_ROLE.ADMIN : accessRole;
+      await onSave({
+        name,
+        email,
+        role,
+        dept,
+        phone,
+        password,
+        ...(showAccessRole || role === 'admin' ? { accessRole: nextAccessRole } : {}),
+      });
       onClose();
     } catch (e) {
       setErr(e.message || 'Không lưu được nhân sự');
@@ -4076,13 +4110,34 @@ function EditPersonSheet({ person, onClose, onSave }) {
             id="edit-person-role"
             className="field-input"
             value={role}
-            onChange={(e) => setRole(e.target.value)}
+            onChange={(e) => handleRoleChange(e.target.value)}
           >
             {roleOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
         </div>
+        {showAccessRole && (
+          <div className="field">
+            <label className="field-label" htmlFor="edit-person-access-role">
+              {locale === 'en' ? 'App permission' : 'Quyền ứng dụng'}
+            </label>
+            <select
+              id="edit-person-access-role"
+              className="field-input"
+              value={accessRole}
+              onChange={(e) => setAccessRole(e.target.value)}
+            >
+              <option value={ACCESS_ROLE.ADMIN}>Admin — full quyền</option>
+              <option value={ACCESS_ROLE.WORKER}>
+                {locale === 'en' ? 'Worker' : 'Nhân viên — quyền thường'}
+              </option>
+            </select>
+            <p className="field-note">
+              Admin được sửa trạng thái kể cả khi đã hoàn thành.
+            </p>
+          </div>
+        )}
         <div className="field">
           <label className="field-label" htmlFor="edit-person-dept">Team</label>
           <input
@@ -4401,13 +4456,14 @@ function ConfirmDeletePersonSheet({ person, onClose, onConfirm }) {
   );
 }
 
-function EditNodeSheet({ node, onClose, onSave }) {
+function EditNodeSheet({ node, onClose, onSave, canOverrideStatus = false }) {
   const label = nodeLevelLabel(node);
   const nodeTable = node?._source?.table;
   const isLeafNode = (node.children || []).length === 0;
-  const showStatus = nodeTable === 'projects'
+  const showStatus = canOverrideStatus
+    || nodeTable === 'projects'
     || (isLeafNode && (nodeTable === 'features' || nodeTable === 'tasks'));
-  const statusLocked = nodeTable === 'projects' && !isLeafNode;
+  const statusLocked = !canOverrideStatus && nodeTable === 'projects' && !isLeafNode;
   const showAssignee = nodeTable === 'tasks';
   const [name, setName] = useState(node.name || '');
   const [status, setStatus] = useState(node.status || 'todo');
@@ -4492,6 +4548,9 @@ function EditNodeSheet({ node, onClose, onSave }) {
             </div>
             {statusLocked && (
               <p className="field-note">Trạng thái được tính tự động từ hạng mục và công việc con.</p>
+            )}
+            {canOverrideStatus && !isLeafNode && (
+              <p className="field-note">Admin: đổi trạng thái thủ công (gỡ hoàn thành nếu chọn khác Đạt).</p>
             )}
           </div>
         )}
@@ -5621,6 +5680,7 @@ function App({ t: tweakSettings }) {
         <EditNodeSheet
           node={sheetNode}
           onClose={() => setSheet(null)}
+          canOverrideStatus={canOverrideNodeStatus(accessRole)}
           onSave={async (payload) => {
             const { siteLocation, ...nodePayload } = payload;
             await saveNodeFull(sheetNode, nodePayload);
