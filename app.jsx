@@ -932,17 +932,6 @@ function NodeDetail({
             </div>
           </div>
 
-          {canEditStatus && (
-            <StatusChoiceGroup
-              className="status-choice-group--inline"
-              value={node.status || 'todo'}
-              onChange={(next) => onSetStatus(next)}
-              note={canOverrideNodeStatus(accessRole) && nodeHasChildren
-                ? 'Admin: đổi trạng thái thủ công (gỡ hoàn thành nếu chọn khác Đạt).'
-                : null}
-            />
-          )}
-
           {canCompleteNode && (
             <div className={`node-completion${isNodeDone ? ' node-completion--done' : ''}`}>
               {node.completedAt ? (
@@ -2666,14 +2655,6 @@ function ProjectDesktopDashboard({
             <StatusChip status={project.status}/>
             <DeadlineChip iso={project.deadline} status={project.status} emptyLabel="Chưa có deadline"/>
           </div>
-          {canEditStatus && typeof onSetStatus === 'function' && (
-            <StatusChoiceGroup
-              className="status-choice-group--dashboard"
-              value={project.status || 'todo'}
-              onChange={(next) => onSetStatus(next, project)}
-              note="Admin: đổi trạng thái thủ công (gỡ hoàn thành nếu chọn khác Đạt)."
-            />
-          )}
         </div>
         <div className="project-dashboard-actions">
           {typeof onOpenActions === 'function' && (
@@ -2796,13 +2777,10 @@ function ProjectDesktopDashboard({
             </div>
           </div>
           <div className="project-dashboard-people">
-            {data.assignees.length > 0 && <Avatars ids={data.assignees.map((name) => {
-              const person = PEOPLE.find((p) => p.name === name);
-              return person?.id || name;
-            })} size="md" max={8} alwaysShow/>}
-            {data.assignees.slice(0, 8).map((name) => (
-              <span key={name}>{name}</span>
-            ))}
+            {data.assignees.slice(0, 8).map((idOrName) => {
+              const person = PEOPLE.find((p) => p.id === idOrName || p.name === idOrName);
+              return <span key={idOrName}>{person?.name || idOrName}</span>;
+            })}
             {data.assignees.length === 0 && <div className="empty">Chưa gán nhân sự.</div>}
             <div style={{ marginTop: 12 }}>
               {typeof onOpenAssignees === 'function' && (
