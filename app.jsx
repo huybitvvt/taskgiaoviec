@@ -613,7 +613,7 @@ function WorkEntryModal({
 // ─── NodeDetail screen ────────────────────────────────────────────
 function NodeDetail({
   node, depth, parent, t = {}, onOpenChild, onBack, onOpenPhoto, onViewPhoto, onEditNote, onEditDeadline,
-  onOpenAssignees, onCycleStatus, onAddChild, onAddFeature, onOpenActions, onChildActions,
+  onOpenAssignees, onCycleStatus, onSetStatus, onAddChild, onAddFeature, onOpenActions, onChildActions,
   onPastePhotos, onOpenWorkAction, onCompleteWorkAction, onSendDiscussion, onDeletePhoto, onOpenDocLink, onDeleteDocLink, onCompleteNode,
   onEditStartedAt, onEditGoodsPercent,
   embedded = false, showBack = true, hideChildrenList = false,
@@ -630,8 +630,9 @@ function NodeDetail({
   const childNodes = listParent ? (listParent.children || []) : (node.children || []);
   const hasChildren = childNodes.length > 0;
   const nodeHasChildren = (node.children || []).length > 0;
-  const canCycleStatus = (canOverrideNodeStatus(accessRole) || !nodeHasChildren)
-    && typeof onCycleStatus === 'function';
+  const canEditStatus = typeof onSetStatus === 'function'
+    && (canOverrideNodeStatus(accessRole) || !nodeHasChildren);
+  const canCycleStatus = canEditStatus && typeof onCycleStatus === 'function';
   const { child: addChildLabel, section: childrenLabel } = addChildLabels(listParent || node);
   const myLabel = levelLabels[depth] || LEVEL_LABEL[depth] || 'Mục';
   const detailTopLabel = parent
@@ -650,7 +651,6 @@ function NodeDetail({
   const canCompleteNode = typeof onCompleteNode === 'function';
   const showCompleteNodeBtn = canCompleteNode && !node.completedAt;
   const isNodeDone = node.status === 'done' || Boolean(node.completedAt);
-  const canReopenCompleted = canOverrideNodeStatus(accessRole) && Boolean(node.completedAt) && canCycleStatus;
   const isProject = nodeTable === 'projects';
   const isFeature = nodeTable === 'features';
   const showInlineProjectOps = false;
@@ -932,6 +932,17 @@ function NodeDetail({
             </div>
           </div>
 
+          {canEditStatus && (
+            <StatusChoiceGroup
+              className="status-choice-group--inline"
+              value={node.status || 'todo'}
+              onChange={(next) => onSetStatus(next)}
+              note={canOverrideNodeStatus(accessRole) && nodeHasChildren
+                ? 'Admin: đổi trạng thái thủ công (gỡ hoàn thành nếu chọn khác Đạt).'
+                : null}
+            />
+          )}
+
           {canCompleteNode && (
             <div className={`node-completion${isNodeDone ? ' node-completion--done' : ''}`}>
               {node.completedAt ? (
@@ -940,15 +951,6 @@ function NodeDetail({
                   <span className="node-completion-time">
                     Thời gian hoàn thành: {formatCompletedAt(node.completedAt)}
                   </span>
-                  {canReopenCompleted && (
-                    <button
-                      type="button"
-                      className="btn btn-secondary node-completion-btn"
-                      onClick={onCycleStatus}
-                    >
-                      Đổi trạng thái
-                    </button>
-                  )}
                 </>
               ) : (
                 <>
@@ -2050,6 +2052,32 @@ function FilterPill({ children, active, onClick, tone }) {
   );
 }
 
+function StatusChoiceGroup({
+  value,
+  onChange,
+  disabled = false,
+  note = null,
+  className = '',
+}) {
+  return (
+    <div className={`status-choice-group ${className}`.trim()} role="group" aria-label="Đổi trạng thái">
+      {Object.entries(STATUS_META).map(([key, meta]) => (
+        <button
+          key={key}
+          type="button"
+          className={`status-choice-btn status-choice-btn--${key} ${value === key ? 'active' : ''}`}
+          onClick={() => onChange?.(key)}
+          disabled={disabled || value === key}
+        >
+          <span className="status-choice-dot" style={{ background: meta.dot }} />
+          {meta.label}
+        </button>
+      ))}
+      {note && <p className="field-note status-choice-note">{note}</p>}
+    </div>
+  );
+}
+
 // ─── Product Card (richer top-level card) ─────────────────────────
 function ProductCard({
   product,
@@ -2531,6 +2559,8 @@ function ProjectDesktopDashboard({
   onOpenSiteSettings,
   onOpenTeamSchedule,
   onOpenAssignees,
+  onSetStatus,
+  canEditStatus = false,
 }) {
   const stats = aggregate(project);
   const pct = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
@@ -2636,6 +2666,14 @@ function ProjectDesktopDashboard({
             <StatusChip status={project.status}/>
             <DeadlineChip iso={project.deadline} status={project.status} emptyLabel="Chưa có deadline"/>
           </div>
+          {canEditStatus && typeof onSetStatus === 'function' && (
+            <StatusChoiceGroup
+              className="status-choice-group--dashboard"
+              value={project.status || 'todo'}
+              onChange={(next) => onSetStatus(next, project)}
+              note="Admin: đổi trạng thái thủ công (gỡ hoàn thành nếu chọn khác Đạt)."
+            />
+          )}
         </div>
         <div className="project-dashboard-actions">
           {typeof onOpenActions === 'function' && (
@@ -3041,6 +3079,10 @@ function DesktopProductsSplit({
             onOpenSiteSettings={detailProps.onOpenSiteSettings}
             onOpenTeamSchedule={detailProps.onOpenTeamSchedule}
             onOpenAssignees={detailProps.onOpenAssignees}
+            onSetStatus={detailProps.onSetStatus}
+            canEditStatus={detailProps.canEditStatus === true
+              || (typeof detailProps.onSetStatus === 'function'
+                && canOverrideNodeStatus(detailProps.accessRole))}
           />
         ) : currentNode ? (
           <NodeDetail
@@ -4531,27 +4573,16 @@ function EditNodeSheet({ node, onClose, onSave, canOverrideStatus = false }) {
         </div>
         {showStatus && (
           <div className="field">
-            <label className="field-label" htmlFor="edit-status">Trạng thái</label>
-            <div className="status-choice-group" role="group" aria-label="Đổi trạng thái">
-              {Object.entries(STATUS_META).map(([value, meta]) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={`status-choice-btn status-choice-btn--${value} ${status === value ? 'active' : ''}`}
-                  onClick={() => setStatus(value)}
-                  disabled={statusLocked}
-                >
-                  <span className="status-choice-dot" style={{ background: meta.dot }} />
-                  {meta.label}
-                </button>
-              ))}
-            </div>
-            {statusLocked && (
-              <p className="field-note">Trạng thái được tính tự động từ hạng mục và công việc con.</p>
-            )}
-            {canOverrideStatus && !isLeafNode && (
-              <p className="field-note">Admin: đổi trạng thái thủ công (gỡ hoàn thành nếu chọn khác Đạt).</p>
-            )}
+            <StatusChoiceGroup
+              value={status}
+              onChange={setStatus}
+              disabled={statusLocked}
+              note={statusLocked
+                ? 'Trạng thái được tính tự động từ hạng mục và công việc con.'
+                : (canOverrideStatus && !isLeafNode
+                  ? 'Admin: đổi trạng thái thủ công (gỡ hoàn thành nếu chọn khác Đạt).'
+                  : null)}
+            />
           </div>
         )}
         <DeadlineDateTimeFields
@@ -5110,13 +5141,33 @@ function App({ t: tweakSettings }) {
     navigate(buildProductPath(stack.slice(0, -1), effectiveLayout));
   }, [navigate, stack, effectiveLayout]);
 
+  const setNodeStatus = useCallback(async (nextStatus, targetNode) => {
+    const node = targetNode || findNode(currentId);
+    if (!node?._source || !nextStatus) return;
+    try {
+      if (nextStatus === 'done') {
+        await completeNode(node);
+        updateNode(node.id, (n) => {
+          n.status = 'done';
+          n.completedAt = new Date().toISOString();
+        });
+        return;
+      }
+      await saveNodePatch(node, { status: nextStatus }, people);
+      updateNode(node.id, (n) => {
+        n.status = nextStatus;
+        n.completedAt = null;
+      });
+    } catch (err) {
+      console.error('[Supabase] Đổi trạng thái:', err);
+      window.alert(err.message || 'Không đổi được trạng thái');
+    }
+  }, [currentId, people, products]);
+
   const cycleStatus = () => {
     const cycle = { todo: 'doing', doing: 'done', done: 'fail', fail: 'todo' };
     const nextStatus = cycle[currentNode?.status] || 'todo';
-    updateNode(currentId, (n) => {
-      n.status = nextStatus;
-      if (nextStatus !== 'done') n.completedAt = null;
-    }, { status: nextStatus });
+    setNodeStatus(nextStatus, currentNode);
   };
 
   const jumpToNode = useCallback((nodeId) => {
@@ -5255,6 +5306,9 @@ function App({ t: tweakSettings }) {
 
   const detailHandlers = {
     onCycleStatus: cycleStatus,
+    onSetStatus: (nextStatus, targetNode) => setNodeStatus(nextStatus, targetNode || currentNode),
+    canEditStatus: canOverrideNodeStatus(accessRole)
+      || ((currentNode?.children || []).length === 0),
     onOpenPhoto: (ph) => setSheet({ type: 'photo', photo: ph, nodeId: currentId, viewOnly: false }),
     onViewPhoto: (ph) => setSheet({ type: 'photo', photo: ph, nodeId: currentId, viewOnly: true }),
     onEditNote: () => setSheet({ type: 'note' }),
@@ -5796,6 +5850,16 @@ function Root() {
       root.classList.remove('layout-desktop', 'layout-mobile', 'layout-native-mobile', 'layout-preview-mobile');
     };
   }, [tweakSettings.accent, effectiveLayout, isNativeMobile, showIOSFrame]);
+
+  // Điện thoại mở /desktop/... → chuyển sang URL mobile để UI không vỡ.
+  useEffect(() => {
+    if (urlLayout === 'desktop' && effectiveLayout === 'mobile') {
+      const next = swapLayoutPath(location.pathname, 'mobile');
+      if (next !== location.pathname) {
+        navigate(next, { replace: true });
+      }
+    }
+  }, [urlLayout, effectiveLayout, location.pathname, navigate]);
 
   const desktopHref = swapLayoutPath(location.pathname, 'desktop');
   const mobileHref = swapLayoutPath(location.pathname, 'mobile');
